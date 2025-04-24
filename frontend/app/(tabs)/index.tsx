@@ -102,10 +102,10 @@ export default function App() {
   return (
     <View style={[styles.container, darkMode && styles.darkContainer]}>
       <View style={styles.header}>
-        <Text style={[styles.appTitle, darkMode && styles.darkText]}>REACT'S</Text>
-        <Text style={[styles.todoTitle, darkMode && styles.darkText]}>My To-Do List</Text>
+        <Text style={[styles.appTitle, darkMode && styles.darkText]}>TODO-LIST</Text>
+        <Text style={[styles.todoTitle, darkMode && styles.darkText]}>Write your task!</Text>
         <View style={styles.modeToggle}>
-          <Text style={darkMode ? styles.darkText : styles.lightText}>{darkMode ? '☀️ Light' : '🌙 Dark'}</Text>
+          <Text style={darkMode ? styles.darkText : styles.lightText}>{darkMode ? 'Light' : 'Dark'}</Text>
           <Switch value={darkMode} onValueChange={setDarkMode} />
         </View>
       </View>
@@ -145,23 +145,23 @@ export default function App() {
             )}
             <View style={styles.taskActions}>
               <Button title="Edit" onPress={() => handleEdit(task)} color="#6e4b3d" />
-              <Button title="Delete" onPress={() => handleDelete(task.id)} color="#b22222" />
+              <Button title="Delete" onPress={() => handleDelete(task.id)} color="#76d7c4" />
             </View>
           </View>
         ))}
       </ScrollView>
 
       <View style={styles.filters}>
-        <Button title="All" onPress={() => setFilter('all')} color={filter === 'all' ? '#6e4b3d' : '#decab9'} />
+        <Button title="All" onPress={() => setFilter('all')} color={filter === 'all' ? '#6e4b3d' : '#daa263'} />
         <Button
           title="Completed"
           onPress={() => setFilter('completed')}
-          color={filter === 'completed' ? '#6e4b3d' : '#decab9'}
+          color={filter === 'completed' ? '#6e4b3d' : '#daa263'}
         />
         <Button
           title="Pending"
           onPress={() => setFilter('pending')}
-          color={filter === 'pending' ? '#6e4b3d' : '#decab9'}
+          color={filter === 'pending' ? '#6e4b3d' : '#daa263'}
         />
       </View>
     </View>
