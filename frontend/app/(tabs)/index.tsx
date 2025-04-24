@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Button,
-  FlatList, TouchableOpacity, StyleSheet, Switch
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  Button,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
+  Alert,
 } from 'react-native';
-import CheckBox from '@react-native-community/checkbox';
 
-type Task = {
-  id: number;
-  title: string;
-  completed: boolean;
-  editing?: boolean;
-  editText?: string;
-};
+const API_URL = 'https://fullstack-1q3k.onrender.com/todos';
 
-const API_URL = "https://fullstack-1q3k.onrender.com/todos/";
-
-const App: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [filter, setFilter] = useState<"all" | "completed" | "pending">("all");
-  const [newTask, setNewTask] = useState<string>("");
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+export default function App() {
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -27,229 +27,268 @@ const App: React.FC = () => {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch(API_URL, {
-        headers: { "Content-Type": "application/json" }
-      });
-      if (!response.ok) throw new Error("Failed to fetch tasks");
-      const data: Task[] = await response.json();
+      const res = await fetch(API_URL);
+      const data = await res.json();
       setTasks(data);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      Alert.alert('Error', 'Failed to fetch tasks');
     }
   };
 
-  const addTask = async () => {
-    if (newTask.trim() === "") return;
+  const handleAdd = async () => {
+    if (!newTask.trim()) return;
     try {
       await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTask.trim(), completed: false }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTask, completed: false }),
       });
-      fetchTasks();
-      setNewTask("");
-    } catch (error) {
-      console.error("Error adding task:", error);
-    }
-  };
-
-  const toggleComplete = async (id: number) => {
-    const task = tasks.find((task) => task.id === id);
-    if (!task) return;
-    try {
-      const response = await fetch(`${API_URL}${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...task, completed: !task.completed }),
-      });
-      if (!response.ok) throw new Error("Failed to update task");
-      const updatedTask: Task = await response.json();
-      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    } catch (error) {
-      console.error("Error updating task:", error);
-    }
-  };
-
-  const startEditing = (id: number) => {
-    setTasks(tasks.map((task) =>
-      task.id === id ? { ...task, editing: true, editText: task.title } : task
-    ));
-  };
-
-  const confirmEdit = async (id: number) => {
-    const task = tasks.find((task) => task.id === id);
-    if (!task || !task.editText?.trim()) return;
-    try {
-      const response = await fetch(`${API_URL}${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...task, title: task.editText }),
-      });
-      if (!response.ok) throw new Error("Failed to update task");
-      const updatedTask: Task = await response.json();
-      setTasks(tasks.map((t) =>
-        t.id === updatedTask.id ? { ...updatedTask, editing: false } : t
-      ));
-    } catch (error) {
-      console.error("Error updating task:", error);
-    }
-  };
-
-  const deleteTask = async (id: number) => {
-    try {
-      await fetch(`${API_URL}${id}`, { method: "DELETE" });
+      setNewTask('');
       fetchTasks();
     } catch (error) {
-      console.error("Error deleting task:", error);
+      Alert.alert('Error', 'Failed to add task');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      fetchTasks();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete task');
+    }
+  };
+
+  const handleToggleComplete = async (task) => {
+    try {
+      await fetch(`${API_URL}/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: task.title, completed: !task.completed }),
+      });
+      fetchTasks();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update task');
+    }
+  };
+
+  const handleEdit = (task) => {
+    setEditingTaskId(task.id);
+    setEditingText(task.title);
+  };
+
+  const handleUpdate = async (id) => {
+    if (!editingText.trim()) return;
+    try {
+      await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editingText }),
+      });
+      setEditingTaskId(null);
+      setEditingText('');
+      fetchTasks();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update task');
     }
   };
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === "completed") return task.completed;
-    if (filter === "pending") return !task.completed;
+    if (filter === 'completed') return task.completed;
+    if (filter === 'pending') return !task.completed;
     return true;
   });
 
   return (
-    <View style={[styles.container, darkMode && styles.dark]}>
+    <View style={[styles.container, darkMode && styles.darkContainer]}>
       <View style={styles.header}>
-        <Text style={styles.title}>To-Do List</Text>
-        <Switch value={darkMode} onValueChange={setDarkMode} />
-        <Text style={styles.modeText}>{darkMode ? "Dark Mode" : "Light Mode"}</Text>
+        <Text style={[styles.appTitle, darkMode && styles.darkText]}>REACT'S</Text>
+        <Text style={[styles.todoTitle, darkMode && styles.darkText]}>My To-Do List</Text>
+        <View style={styles.modeToggle}>
+          <Text style={darkMode ? styles.darkText : styles.lightText}>{darkMode ? '☀️ Light' : '🌙 Dark'}</Text>
+          <Switch value={darkMode} onValueChange={setDarkMode} />
+        </View>
       </View>
 
-      <View style={styles.inputContainer}>
+      <View style={styles.inputGroup}>
         <TextInput
-          style={styles.input}
-          placeholder="Add a new task"
+          style={[styles.input, darkMode && styles.darkInput]}
+          placeholder="Add a new task..."
+          placeholderTextColor={darkMode ? '#c2a68d' : '#6e4b3d'}
           value={newTask}
           onChangeText={setNewTask}
         />
-        <Button title="Add Task" onPress={addTask} />
+        <Button title="Add Task" onPress={handleAdd} color="#6e4b3d" />
       </View>
 
-      <FlatList
-        data={filteredTasks}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={[styles.taskItem, item.completed && styles.completed]}>
-            <View style={styles.taskContent}>
-              <CheckBox
-                value={item.completed}
-                onValueChange={() => toggleComplete(item.id)}
-              />
-              {item.editing ? (
+      <ScrollView style={styles.taskList}>
+        {filteredTasks.map((task) => (
+          <View key={task.id} style={[styles.taskCard, darkMode && styles.darkTaskCard]}>
+            <TouchableOpacity onPress={() => handleToggleComplete(task)} style={styles.checkbox}>
+              <Text style={task.completed ? styles.completed : styles.incomplete}>
+                {task.completed ? '☑️' : '⬜'}
+              </Text>
+            </TouchableOpacity>
+            {editingTaskId === task.id ? (
+              <>
                 <TextInput
-                  style={styles.input}
-                  value={item.editText}
-                  onChangeText={(text) =>
-                    setTasks(tasks.map((t) =>
-                      t.id === item.id ? { ...t, editText: text } : t
-                    ))
-                  }
-                  onEndEditing={() => confirmEdit(item.id)}
-                  autoFocus
+                  style={[styles.editInput, darkMode && styles.darkInput]}
+                  value={editingText}
+                  onChangeText={setEditingText}
                 />
-              ) : (
-                <Text style={styles.taskText}>{item.title}</Text>
-              )}
-            </View>
-            <View style={styles.taskButtons}>
-              {item.editing ? (
-                <Button title="Save" onPress={() => confirmEdit(item.id)} />
-              ) : (
-                <Button title="Edit" onPress={() => startEditing(item.id)} />
-              )}
-              <Button title="Delete" onPress={() => deleteTask(item.id)} />
+                <Button title="Save" onPress={() => handleUpdate(task.id)} color="#6e4b3d" />
+              </>
+            ) : (
+              <Text style={[styles.taskTitle, task.completed && styles.completed, darkMode && styles.darkText]}>
+                {task.title}
+              </Text>
+            )}
+            <View style={styles.taskActions}>
+              <Button title="Edit" onPress={() => handleEdit(task)} color="#6e4b3d" />
+              <Button title="Delete" onPress={() => handleDelete(task.id)} color="#b22222" />
             </View>
           </View>
-        )}
-      />
+        ))}
+      </ScrollView>
 
-      <View style={styles.filterButtons}>
-        <TouchableOpacity style={[styles.filterButton, filter === "all" && styles.active]} onPress={() => setFilter("all")}>
-          <Text>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.filterButton, filter === "completed" && styles.active]} onPress={() => setFilter("completed")}>
-          <Text>Completed</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.filterButton, filter === "pending" && styles.active]} onPress={() => setFilter("pending")}>
-          <Text>Pending</Text>
-        </TouchableOpacity>
+      <View style={styles.filters}>
+        <Button title="All" onPress={() => setFilter('all')} color={filter === 'all' ? '#6e4b3d' : '#decab9'} />
+        <Button
+          title="Completed"
+          onPress={() => setFilter('completed')}
+          color={filter === 'completed' ? '#6e4b3d' : '#decab9'}
+        />
+        <Button
+          title="Pending"
+          onPress={() => setFilter('pending')}
+          color={filter === 'pending' ? '#6e4b3d' : '#decab9'}
+        />
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f7f2ef",
-    justifyContent: "center",
-    padding: 20,
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    backgroundColor: '#f7e1d5',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
-  dark: {
-    backgroundColor: "#222",
+  darkContainer: {
+    backgroundColor: '#3b2f2b',
   },
+
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginBottom: 20,
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  appTitle: {
+    fontSize: 28,
+    fontFamily: 'Pacifico',
+    color: '#6e4b3d',
   },
-  modeText: {
-    color: "#5a3e36",
+  todoTitle: {
+    fontSize: 20,
+    fontFamily: 'Pacifico',
+    color: '#6e4b3d',
   },
-  inputContainer: {
-    flexDirection: "row",
-    marginVertical: 20,
+  darkText: {
+    color: '#fff',
+  },
+  lightText: {
+    color: '#000',
+  },
+
+  modeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  inputGroup: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   input: {
-    flex: 1,
-    padding: 10,
-    borderColor: "#c2a68d",
+    borderColor: '#6e4b3d',
     borderWidth: 1,
     borderRadius: 5,
+    paddingHorizontal: 10,
+    height: 40,
+    color: '#6e4b3d',
+    width: 200,
+    backgroundColor: '#f7e1d5',
   },
-  taskItem: {
-    backgroundColor: "#f2e1d9",
+  darkInput: {
+    backgroundColor: '#4a3a3a',
+    color: '#fff',
+    borderColor: '#b5a397',
+  },
+
+  taskList: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  taskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0c2a6',
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+    justifyContent: 'space-between',
+  },
+  darkTaskCard: {
+    backgroundColor: '#4a3a3a',
+  },
+
+  checkbox: {
+    marginRight: 10,
   },
   completed: {
-    backgroundColor: "#ddd",
+    textDecorationLine: 'line-through',
+    color: '#6e4b3d',
   },
-  taskContent: {
-    flexDirection: "row",
-    alignItems: "center",
+  incomplete: {
+    color: '#000',
   },
-  taskText: {
-    marginLeft: 10,
+  taskTitle: {
+    flex: 1,
+    fontSize: 16,
+    color: '#6e4b3d',
   },
-  taskButtons: {
-    flexDirection: "row",
+
+  editInput: {
+    borderColor: '#6e4b3d',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    height: 40,
+    color: '#6e4b3d',
+    width: 180,
+    backgroundColor: '#f7e1d5',
+  },
+
+  taskActions: {
+    flexDirection: 'row',
     gap: 5,
   },
-  filterButtons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 20,
-  },
-  filterButton: {
-    padding: 10,
-    backgroundColor: "#decab9",
-    borderRadius: 5,
-  },
-  active: {
-    backgroundColor: "#a9746e",
+
+  filters: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 30,
   },
 });
-
-export default App;
