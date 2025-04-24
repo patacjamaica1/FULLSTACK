@@ -9,7 +9,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://fastapi-frontend.netlify.app"
+        "http://localhost:19000",
+        "exp://dyamayka.exp.direct"
         ],
     allow_credentials=True,
     allow_methods=["*"],
