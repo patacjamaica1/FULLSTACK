@@ -9,8 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:19000",
-        "exp://dyamayka.exp.direct"
+        "*"
         ],
     allow_credentials=True,
     allow_methods=["*"],
